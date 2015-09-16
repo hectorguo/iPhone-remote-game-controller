@@ -1,7 +1,7 @@
 # iPhone-remote-game-controller
 Use iPhone to simulate Wii to play web games on PC
 
-[Imgur](http://i.imgur.com/hDSmdI9.gifv)
+[Demo](http://i.imgur.com/hDSmdI9.gifv)
 
 You can fork it and try on your localhost.
 

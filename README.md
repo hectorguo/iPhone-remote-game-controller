@@ -1,10 +1,7 @@
 # iPhone-remote-game-controller
-use iPhone to simulate Wii to play web games on PC
+Use iPhone to simulate Wii to play web games on PC
 
-<video poster="//i.imgur.com/hDSmdI9h.jpg" preload="auto" autoplay="autoplay" muted="muted" loop="loop" webkit-playsinline="" style="width: 300px; height: 360px;">
-    <source src="//i.imgur.com/hDSmdI9.webm" type="video/webm">
-    <source src="//i.imgur.com/hDSmdI9.mp4" type="video/mp4">
-</video>
+[Imgur](http://i.imgur.com/hDSmdI9.gifv)
 
 You can fork it and try on your localhost.
 

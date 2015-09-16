@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>       
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game Control</title>
+    <link rel="stylesheet" href="css/style.css"></head>
+    <style>
+      .info{
+        font-size: 15em;
+        margin:auto;
+        text-align: center;
+      }
+      #icon {
+        display: none;
+        transition:all .5s;
+      }
+      .info button {
+        width: 110px;
+        height: 110px;
+        background-color: #FF5B5B;
+        border: none;
+        border-radius: 100%;
+        font-size: 16px;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- <canvas id="myCanvas" width="360" height="450" style="border:1px solid #d3d3d3;">
+    </canvas> -->
+    <div class="info"><span id="icon" class="icon-arrow-right"></span>
+      <button onclick="start()">Start</button>
+      <button onclick="restart()">Restart</button>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      function infoSend(direction){
+        var socket = io();
+        
+        setTimeout(function(){
+          count--;
+          if(count === 0){
+            socket.emit('direction', direction);
+            var icon = document.querySelector('#icon');
+            icon.className = 'icon-arrow-'+direction.toLowerCase();
+            icon.style.display = 'block';
+            setTimeout(function(){
+              icon.style.display = 'none';
+            }, 500);
+          }
+        }, 100);
+        count++;
+      }
+      function deviceMotionHandler(event){
+        var acceleration = event.acceleration;
+
+        if(acceleration.x > 10) {
+          infoSend('RIGHT');
+        } else if(acceleration.x < -10) {
+          infoSend('LEFT');
+        }
+
+        if(acceleration.y > 10) {
+          infoSend('UP');
+        } else if (acceleration.y < -10) {
+          infoSend('DOWN');
+        }
+
+      }
+      function start(){
+        var socket = io();
+        socket.emit('control', 1);
+      }
+      function restart(){
+        var socket = io();
+        socket.emit('control', 0);
+      }
+      if (window.DeviceMotionEvent) {
+        var count = 0;
+        window.addEventListener('devicemotion', deviceMotionHandler, false);
+      }
+    </script>
+  </body>
+</html>

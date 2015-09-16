@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SnakyLine.0</title>
+    <style>
+      #map i {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #EBEBEB;
+        display: inline-block;
+        float: left;
+        background: rgb(255, 255, 255);
+      }
+      #container {
+        margin:auto;
+        max-width: 500px;
+      }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="//libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+<script type="text/javascript">
+/*
+ *Author: liege
+ *Email: liegemove@live.com
+ *Date: 2014-3-15 
+ *gitHub:https://github.com/liege/Snakylines
+ *remark:最初的很多设想并没有完成，先这样吧，可以玩儿
+ */
+ function fireKeyEvent(keyCode) {
+  jQuery.event.trigger({type:'keydown',which: keyCode});
+  // var evt = document.createEvent("KeyboardEvent");
+  // evt.initKeyEvent("keypress",       // typeArg,                                                           
+  //                  true,             // canBubbleArg,                                                        
+  //                  true,             // cancelableArg,                                                       
+  //                  null,             // viewArg,  Specifies UIEvent.view. This value may be null.     
+  //                  false,            // ctrlKeyArg,                                                               
+  //                  false,            // altKeyArg,                                                        
+  //                  false,            // shiftKeyArg,                                                      
+  //                  false,            // metaKeyArg,                                                       
+  //                  keyCode,               // keyCodeArg,                                                      
+  //                   0);              // charCodeArg);
+  // var canceled = !body.dispatchEvent(evt);
+  // if(canceled) {
+  //   // A handler called preventDefault
+  //   alert("canceled");
+  // } else {
+  //   // None of the handlers called preventDefault
+  //   alert("not canceled");
+  // }
+}
+function Snaky(direction,head,color){
+  this.size = 3;   //初始长度
+  this.direction = direction;   //方向
+  this.color = color;   //颜色
+  this.head = head; //蛇头
+  this.spoor = [];  //足迹
+  this.life = true; //生命
+}
+Snaky.prototype.eat = function(){
+  this.size++;  //吃食物，长度增加
+};
+//方向控制
+Snaky.prototype.move = function(e){
+  var ev = e||event;
+  switch(ev.keyCode){
+    case 38:
+    if(this.direction == 2){break;}   //防止蛇倒走
+    this.direction = 0; break;
+    case 39:
+    if(this.direction == 3){break;}
+    this.direction = 1; break;
+    case 40:
+    if(this.direction == 0){break;}
+    this.direction = 2; break;
+    case 37:
+    if(this.direction == 1){break;}
+    this.direction = 3; break;
+  };
+  console.log("蛇头在："+this.head);
+};
+//object fooder
+function Fooder(energy,color){
+  this.pos=0;
+  this.energy = energy;
+  this.color = color; 
+}
+//生成食物
+Fooder.prototype.create = function(snakyBody){
+  var state = false;  
+  do {
+    //随机生产食物坐标
+    this.pos = Math.round(Math.random()*400);
+    state = false;    
+      //通过ID获取蛇身格子的编号，如果生产的食物坐标与蛇身重复，则重新循环生成食物
+      for(var i=0;i<snakyBody.length;i++){
+        if(this.pos in snakyBody){
+          //console.log("false");
+          state = true;
+          break;
+        }
+      }             
+  }while(state);  
+  console.log(this.pos);
+};
+//备用 彩蛋
+Fooder.prototype.nourish = function(){
+  return this.energy;
+};
+//object map
+function Map(width,height,color){
+  this.iPos = [];   //存储格子们的数组，节点对象类数组
+  this.width = width;
+  this.height = height; 
+  this.color = color;   //地图颜色
+  this.snakyBody = [];   //用来存储贪吃蛇身体坐标的数组
+  this.snakyHead = null;
+}
+//绘制地图
+Map.prototype.scene = function(gridSize){
+  var oWrap = document.createElement("div"),
+    aI = null;
+  oWrap.id = "map";
+  document.getElementById('container').appendChild(oWrap);
+  for(var j=0;j<this.width;j++){  
+    for(var i=0;i<this.height;i++){
+      aI = document.createElement("i");   
+      // aI.style.width = gridSize;
+      // aI.style.height = gridSize;
+      // aI.style.border = "1px solid #ccc";
+      // aI.style.display = "inline-block";
+      // aI.style.float = "left";
+      // aI.style.background = this.color;
+      aI.pos = {x:i,y:j};
+      oWrap.appendChild(aI);
+      this.iPos.push(aI);   //每个格子
+    } 
+  } 
+  oWrap.style.width = this.width * aI.offsetWidth + "px"; 
+};
+//绘制食物
+Map.prototype.canvasFood = function(pos){ 
+  this.iPos[pos].style.background = "#000";   //通过pos（索引值）设置当前格子的颜色
+};
+//绘制贪吃蛇
+Map.prototype.canvasSnaky = function(size,direction,spoor){
+  //获取蛇身序列数组
+  for(var i=0;i<size;i++){
+    this.snakyBody=spoor.slice(spoor.length - size,spoor.length); //从蛇走过的所有足迹里截取最新的部分
+  }
+  //显示蛇行走路径
+  for(var i=0;i<this.snakyBody.length;i++){
+    //显示蛇身
+    if(this.iPos[this.snakyBody[i]]){
+      this.iPos[this.snakyBody[i]].style.background = "#000";
+    }
+    //序列第一个——蛇头,备用
+    this.snakyHead = this.iPos[spoor.slice(spoor.length - 1)];    
+  }
+  //把总足迹里，蛇身以外的部分隐藏
+  var tail = spoor.slice(spoor.length - size-1,spoor.length - size);
+  if(tail>0&&spoor.length>3){
+    //清扫蛇尾
+    this.iPos[tail].style.background = "#fff";
+    //console.log("test:"+tail);
+  }
+};
+//控制器
+function Control(gridSize){
+  this.map = new Map(20,20,"#fff");
+  var headIndex;
+  var secondIndex;
+  this.map.scene(gridSize);
+}
+//游戏开始
+Control.prototype.begin = function(gameSpeed){
+  var _this = this; 
+  var map = this.map;
+  var snaky = new Snaky(1,0,"#000");
+  var food = new Fooder(1,"#000");
+  food.create(this.map.snakyBody);
+  map.canvasFood(food.pos);
+
+  document.onkeydown = function(e){
+    snaky.move(e);
+    console.log("前进方向:"+snaky.direction);
+  };
+  var socket = io();
+  socket.on('direction', function(msg){
+    console.log(msg);
+    var keyCode;
+    switch (msg){
+      case 'UP':
+        keyCode = 38;
+        break;
+      case 'RIGHT':
+        keyCode = 39;
+        break;
+      case 'DOWN':
+        keyCode = 40;
+        break;
+      case 'LEFT':
+        keyCode = 37;
+        break;
+    }
+    snaky.move({keyCode:keyCode});
+  })
+  // alert(map.iPos[19].pos.x)
+  var into = window.setInterval(function(){
+    switch(snaky.direction){
+      case 0:
+      snaky.head-=20; break;
+      case 1:
+      snaky.head++; break;
+      case 2:
+      snaky.head+=20;  break;
+      case 3:
+      snaky.head--; break;
+    }
+    //通过蛇头的位置记录蛇的足迹
+    snaky.spoor.push(snaky.head);
+    map.canvasSnaky(snaky.size,snaky.direction,snaky.spoor);
+    //如果蛇与食物重叠，判定为吃到
+    if(food.pos == map.snakyBody.slice(map.snakyBody.length - 1)){
+      snaky.eat();
+      food.create(map.snakyBody);
+      map.canvasFood(food.pos);
+    }
+    //游戏失败判断
+    //蛇头——蛇身数组最后一位
+    headIndex = map.snakyBody.slice(map.snakyBody.length-1)[0];
+    //蛇头后一格
+    secondIndex = map.snakyBody.slice(map.snakyBody.length-2,map.snakyBody.length-1)[0];
+    if(map.snakyBody.length>4){
+      //蛇头以外的身体
+      var arr = map.snakyBody.slice(0,map.snakyBody.length-1);
+      document.title = headIndex +"-" +arr;
+      //吃自己
+      for(var i=0;i<arr.length;i++){
+        console.log(headIndex);
+        if(headIndex == arr[i]){
+          window.clearInterval(into);
+          snaky.life = false;
+          _this.over();
+        }
+      }
+    }
+    //上下越界 左右越界
+    document.title =snaky.head;
+    //蛇头与第二节的距离，如果大于1，可以判定左右越界
+    if(map.iPos[headIndex]){
+      var dis = map.snakyBody.length>2?Math.abs(map.iPos[headIndex].pos.x-map.iPos[secondIndex].pos.x):0;
+    }
+    if(snaky.head<0||snaky.head>399||dis>1){
+      window.clearInterval(into);
+      snaky.life = false;
+      _this.over();
+    }   
+    
+        
+  },gameSpeed); 
+};
+//游戏失败
+Control.prototype.over = function(){
+  alert("GAME OVER!");
+};
+window.onload = function(){
+  var size = document.getElementById("size"),
+      speed = document.getElementById("speed"),
+    start = document.getElementById("start"),
+    restart = document.getElementById("restart");
+
+  var socket = io();
+  socket.on('control', function(msg){
+    msg && $(start).click() || $(restart).click();
+  });
+  
+  var game = new Control(size.value+"px");
+  start.onclick = function(){
+    game.begin(parseInt(speed.value));
+    size.disabled =true;
+    speed.disabled =true;
+    start.disabled =true;
+  }; 
+  size.onchange = function(){
+    var aI = document.getElementsByTagName("i"),
+      map = document.getElementById("map");
+    for(var i=0;i<aI.length;i++){
+      aI[i].style.width = this.value+"px";
+      aI[i].style.height = this.value+"px";
+    }
+    map.style.width = aI[0].offsetWidth*20 + "px";  
+  };
+  restart.onclick = function(){
+    window.location.reload();
+  };
+
+
+};
+</script>
+<style>
+  body{ font-family: verdana;}
+  h1{ font-size: 30px; font-weight: 400;}
+</style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>control:↑ ↓ ← → (You can also use your mobile device to control it. Use your mobile browser to open <a href="http://192.168.1.10/mobile.html">192.168.1.10/mobile.html</a>. You may need to change it to your own localhost IP)</h1>
+      <label for="">map size:</label>
+      <select name="" id="size">
+        <option value="20">big</option>
+        <option value="15">small</option>
+      </select>
+      <label for="">speed:</label>
+      <select name="" id="speed">
+        <option value="200">fast</option>
+        <option value="500">slow</option>
+      </select>
+      <input type="button" id="start" value="start" />
+      <input type="button" id="restart" value="restart" />
+    </div>
+    
+  </body>
+</html>
